@@ -8,6 +8,15 @@
 </head>
 <body>
     <canvas class="outline mx-auto mt-32" id="canvas" width="800" height="600"></canvas>
+    
+    <div class="flex mx-auto mt-16">
+        <form id="form" class="mx-auto" action="">
+            <label for="fname">Say Something: </label>
+            <input class="outline mx-3" type="text" id="message" name="message" value="">
+            <input class="outline px-3" type="submit" value="Submit">
+        </form>
+    </div> 
+    
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/client.js"></script>
 </body>

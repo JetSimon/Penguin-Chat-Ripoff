@@ -22,6 +22,7 @@ class Player {
         this.y = y;
         this.targetX = x;
         this.targetY = y;
+        this.message = '';
     }
 }
 
@@ -56,6 +57,18 @@ io.on('connection', (socket) => {
 
     socket.on('getAllPlayers', (codeName) => {
         io.sockets.in(DEFAULT_SERVER).emit('sendAllPlayers', players, codeName);
+    });
+
+    socket.on('chatMessage', (content, x, y, name) => {
+        players[name].x = x;
+        players[name].y = y;
+        players[name].message = content;
+        io.sockets.in(DEFAULT_SERVER).emit('updatePlayer', players[name]);
+        
+        setTimeout(() => {
+            players[name].message = '';
+            io.sockets.in(DEFAULT_SERVER).emit('removePlayerMessage', name);
+        }, 5000);
     });
 
 });

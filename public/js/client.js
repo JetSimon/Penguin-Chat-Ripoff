@@ -1,5 +1,7 @@
 let socket = io();
 let playerName;
+const penguinImage = new Image(64, 64);
+penguinImage.src = "penguin.png";
 
 socket.on('connect', function() {
     fetch('https://random-word-api.herokuapp.com/word')
@@ -13,6 +15,8 @@ socket.on('connect', function() {
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+var form = document.getElementById('form');
+var input = document.getElementById('message');
 
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -41,6 +45,7 @@ class Player {
         this.targetY = y;
         this.speed = 5;
         this.color = 0;
+        this.message = '';
 
         for(let i = 0; i < this.name.length; i++) {
             let c = this.name[i];
@@ -51,10 +56,37 @@ class Player {
     }
 
     draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 64, 64);
+        ctx.textAlign = "center";
+        // create offscreen buffer, 
+        let buffer = document.createElement('canvas');
+        buffer.width = penguinImage.width;
+        buffer.height = penguinImage.height;
+        let bx = buffer.getContext('2d');
+
+        // fill offscreen buffer with the tint color
+        bx.fillStyle = this.color;
+        bx.fillRect(0,0,buffer.width,buffer.height);
+
+        // destination atop makes a result with an alpha channel identical to fg, but with all pixels retaining their original color *as far as I can tell*
+        bx.globalCompositeOperation = "destination-atop";
+        bx.drawImage(penguinImage,0,0);
+
+
+        // to tint the image, draw it first
+        ctx.drawImage(penguinImage, this.x, this.y);
+
+
+        //then set the global alpha to the amound that you want to tint it, and draw the buffer directly on top of it.
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(buffer, this.x, this.y);
+
+        ctx.globalAlpha = 1;
+
         ctx.fillStyle = 'black';
-        ctx.fillText(this.name, this.x, this.y - 15);
+        ctx.font = '10px serif';
+        ctx.fillText(this.name, this.x + 32, this.y - 12);
+        ctx.font = '18px serif';
+        ctx.fillText(this.message, this.x + 32, this.y - 50);
     }
 
     update() {
@@ -72,8 +104,6 @@ class Player {
     }
 }
 
-ctx.font = '18px serif';
-
 let players = {};
 
 canvas.addEventListener('mousedown', function(e) {
@@ -81,6 +111,13 @@ canvas.addEventListener('mousedown', function(e) {
     const targetX = coords[0];
     const targetY = coords[1];
     socket.emit('playerMoving', playerName, players[playerName].x, players[playerName].y, targetX, targetY);
+});
+
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (input.value) {
+        socket.emit('chatMessage', input.value, players[playerName].x, players[playerName].y, playerName);
+    }
 });
 
 socket.on('sendAllPlayers', (serverPlayers, codeName) => {
@@ -101,10 +138,24 @@ socket.on('updatePlayer', (newPlayer) => {
     players[newPlayer.name].y = newPlayer.x;
     players[newPlayer.name].targetX = newPlayer.targetX;
     players[newPlayer.name].targetY = newPlayer.targetY;
+    players[newPlayer.name].message = newPlayer.message;
 });
 
 socket.on('deletePlayer', (toDeleteName) => {
     delete players[toDeleteName];
+});
+
+socket.on('deletePlayer', (toDeleteName) => {
+    delete players[toDeleteName];
+});
+
+socket.on('requestPositionUpdate', (name) => {
+    if(playerName != name) return;
+    socket.emit('playerMoving', playerName, players[playerName].x, players[playerName].y, players[playerName].targetX, players[playerName].targetY);
+});
+
+socket.on('removePlayerMessage', (name) => {
+    players[name].message = '';
 });
 
 function update()
